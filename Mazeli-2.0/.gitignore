@@ -1,0 +1,10 @@
+.vs/
+
+*.db
+*.ipch
+*.vcxproj.user
+*.pdb
+*.obj
+*.log
+*.suo
+*.sdf
