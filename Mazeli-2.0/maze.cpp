@@ -536,7 +536,15 @@ void MainFrame::initConnections() {
 }
 
 MainFrame::MainFrame()
-    : wxFrame(NULL, wxID_ANY, "Maze", wxPoint(0, 0), wxSize(1500, 800)) {
+    : wxFrame(NULL, wxID_ANY, "Maze Solver - Mazeli 2.0", wxPoint(0, 0), wxSize(1500, 800)) {
+
+    // Set the application icon
+#ifdef _WIN32
+    wxIcon icon;
+    if (icon.LoadFile(wxT("101"), wxBITMAP_TYPE_ICO_RESOURCE)) {
+        SetIcon(icon);
+    }
+#endif
 
     grid = new Maze(this, wxID_ANY);
     spanel = new SidePanel(this, wxID_ANY);
