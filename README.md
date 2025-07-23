@@ -232,7 +232,7 @@ This project is licensed under the GNU Affero General Public License v3.0 (AGPL-
 
 ## 👥 Team HAVELI
 
-This project was developed by **Team HAVELI**, a dedicated group of computer science enthusiasts passionate about algorithm visualization and educational software development.
+This project was developed by **Team HAVELI**, a dedicated group of cyber security enthusiasts passionate about algorithm visualization and educational software development.
 
 ### Core Team Members
 
