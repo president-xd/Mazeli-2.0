@@ -1,0 +1,120 @@
+name: Build & Release (Linux ELF + Windows EXE)
+
+on:
+  push:
+    tags:
+      - 'v*'          # e.g. v1.0.0, v2.3.1
+  workflow_dispatch:   # allow manual trigger too
+
+jobs:
+  build-linux:
+    name: Build Linux (ELF)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install deps (wxWidgets + build tools)
+        run: |
+          sudo apt-get update
+          # Try 3.2 first (Ubuntu 22.04+), fallback to 3.0 if not found
+          sudo apt-get install -y cmake build-essential libwxgtk3.2-dev || \
+          sudo apt-get install -y cmake build-essential libwxgtk3.0-gtk3-dev
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: |
+          cmake --build build --config Release -- -j$(nproc)
+
+      - name: Package
+        run: |
+          mkdir -p dist
+          cp build/Mazeli dist/Mazeli
+          strip dist/Mazeli || true
+          tar -czf Mazeli-linux-x86_64.tar.gz -C dist Mazeli
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-artifact
+          path: Mazeli-linux-x86_64.tar.gz
+
+  build-windows:
+    name: Build Windows (EXE)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up MSYS2 (with wxWidgets)
+        uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: >-
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-wxWidgets
+            zip
+
+      - name: Configure (MinGW)
+        shell: msys2 {0}
+        run: |
+          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build (MinGW)
+        shell: msys2 {0}
+        run: |
+          cmake --build build --config Release -- -j4
+
+      - name: Package
+        shell: msys2 {0}
+        run: |
+          mkdir -p dist
+          cp build/Mazeli.exe dist/Mazeli.exe
+          strip dist/Mazeli.exe || true
+          zip -r Mazeli-windows-x86_64.zip dist/Mazeli.exe
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-artifact
+          path: Mazeli-windows-x86_64.zip
+
+  publish:
+    name: Publish Release
+    runs-on: ubuntu-latest
+    needs:
+      - build-linux
+    # Publish only when this is a tag push (not manual)
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-artifact
+          path: artifacts/
+
+      - name: Download Windows artifact (if available)
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-artifact
+          path: artifacts/
+        continue-on-error: true
+
+      - name: Show artifacts
+        run: ls -R artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/Mazeli-linux-x86_64.tar.gz
+            artifacts/Mazeli-windows-x86_64.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
